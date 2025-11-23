@@ -1323,7 +1323,6 @@ script:
               if (v < 0.0f) v = 0.0f;
               if (v > 1.0f) v = 1.0f;
               return v;
-#      - script.execute: control_leds
       - delay: 1s
       - lambda: id(dial_touched) = false;
       - sensor.rotary_encoder.set_value:
@@ -1392,6 +1391,42 @@ script:
           value: 0
       - script.execute: control_leds
 
+  # Custom script to duck audio
+  - id: duck_volume_custom
+    mode: restart
+    parameters:
+      unduck: bool  # True: Return volume to normal
+    then:
+      - if: # if the volume is already low, then dont bother ducking audio at all
+          condition:
+            lambda: |-
+              return id(ha_media_player_volume).state < 0.14;
+          then:
+            - script.stop: duck_volume_custom
+      - if:
+          condition:
+            lambda: return unduck;
+          then:
+            # Return volume to value it was at during the initial duck
+            - homeassistant.action:
+                action: media_player.volume_set
+                data_template:
+                  entity_id: ${ha_media_player}
+                  volume_level: !lambda "return id(pre_duck_volume);"
+          else:
+            # Record current volume to use when we unduck
+            # for some reason, duck is called multiple times before unduck, so we want to only set this var once
+            # Allow for small floating-point differences
+            - lambda: |-
+                if (fabs(id(ha_media_player_volume).state - 0.16) > 0.01) {
+                  id(pre_duck_volume) = id(ha_media_player_volume).state;
+                }
+            - homeassistant.action:
+                action: media_player.volume_set
+                data:
+                  entity_id: ${ha_media_player}
+                  volume_level: "0.15"
+                  
   # Script executed when the hue is increased/decreased from the dial
   - id: control_hue
     mode: restart
