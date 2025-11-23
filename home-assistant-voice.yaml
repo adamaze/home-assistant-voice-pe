@@ -1791,9 +1791,9 @@ voice_assistant:
         id: media_mixing_input
         decibel_reduction: 20  # Number of dB quieter; higher implies more quiet, 0 implies full volume
         duration: 0.0s         # The duration of the transition (default is no transition)
-      - script.execute:
-          id: duck_volume_custom
-          unduck: false
+    - script.execute:
+        id: duck_volume_custom
+        unduck: false
   on_listening:
     - lambda: id(voice_assistant_phase) = ${voice_assist_waiting_for_command_phase_id};
     - script.execute: control_leds
@@ -1833,9 +1833,9 @@ voice_assistant:
         id: media_mixing_input
         decibel_reduction: 0
         duration: 1.0s
-      - script.execute:
-          id: duck_volume_custom
-          unduck: true
+    - script.execute:
+        id: duck_volume_custom
+        unduck: true
     # If the end happened because of an error, let the error phase on for a second
     - if:
         condition:
