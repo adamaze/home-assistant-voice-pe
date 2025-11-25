@@ -1266,19 +1266,29 @@ script:
       increase_volume: bool  # True: Increase volume / False: Decrease volume.
     then:
       - delay: 16ms
-      - if:
-          condition:
-            lambda: return increase_volume;
-          then:
-            - homeassistant.service:
-                service: media_player.volume_up
-                data:
-                  entity_id: ${ha_media_player}
-          else:
-            - homeassistant.service:
-                service: media_player.volume_down
-                data:
-                  entity_id: ${ha_media_player}
+      # Compute new volume and call Home Assistant
+      - homeassistant.service:
+          service: media_player.volume_set
+          data:
+            entity_id: ${ha_media_player}
+            volume_level: !lambda |-
+              // Read current reported volume from the HA sensor
+              float v = id(ha_media_player_volume).state;
+              if (!isfinite(v)) {
+                // fallback if sensor state is not a number
+                v = 0.0f;
+              }
+              // Step = 1/24 ≈ 0.04166666
+              const float step = 0.04166666f;
+              if (increase_volume) {
+                v += step;
+              } else {
+                v -= step;
+              }
+              // Clamp to [0.0, 1.0]
+              if (v < 0.0f) v = 0.0f;
+              if (v > 1.0f) v = 1.0f;
+              return v;
 #      - script.execute: control_leds
       - delay: 1s
       - lambda: id(dial_touched) = false;
