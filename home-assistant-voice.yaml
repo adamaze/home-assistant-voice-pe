@@ -1261,8 +1261,7 @@ script:
 
   # Script executed when the volume is increased/decreased from the dial
   - id: control_volume
-    mode: queued          # don't restart; queue incoming runs
-    max_runs: 12        # allow up to 12 queued runs (tune as needed)
+    mode: restart
     parameters:
       increase_volume: bool  # True: Increase volume / False: Decrease volume.
     then:
@@ -1291,7 +1290,7 @@ script:
               if (v > 1.0f) v = 1.0f;
               return v;
 #      - script.execute: control_leds
-      - delay: 250ms
+      - delay: 1s
       - lambda: id(dial_touched) = false;
       - sensor.rotary_encoder.set_value:
           id: dial
