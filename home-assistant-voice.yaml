@@ -1291,7 +1291,7 @@ script:
               if (v > 1.0f) v = 1.0f;
               return v;
 #      - script.execute: control_leds
-      - delay: 1s
+      - delay: 250ms
       - lambda: id(dial_touched) = false;
       - sensor.rotary_encoder.set_value:
           id: dial
