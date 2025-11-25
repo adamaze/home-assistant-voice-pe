@@ -1295,7 +1295,6 @@ script:
       - sensor.rotary_encoder.set_value:
           id: dial
           value: 0
-      - script.execute: control_leds
   # Custom script to duck audio
   - id: duck_volume_custom
     mode: restart
