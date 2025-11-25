@@ -1262,7 +1262,7 @@ script:
   # Script executed when the volume is increased/decreased from the dial
   - id: control_volume
     mode: queued          # don't restart; queue incoming runs
-    max_length: 12        # allow up to 12 queued runs (tune as needed)
+    max_runs: 12        # allow up to 12 queued runs (tune as needed)
     parameters:
       increase_volume: bool  # True: Increase volume / False: Decrease volume.
     then:
