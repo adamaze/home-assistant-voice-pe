@@ -1308,7 +1308,7 @@ script:
             volume_level: !lambda |-
               // Read current reported volume from the HA sensor
               float v = id(ha_media_player_volume).state;
-              ESP_LOGD("display lambda", v);
+              ESP_LOGD("control_volume", "media player %s is currently at %d", ha_media_player_volume, v);
               if (!isfinite(v)) {
                 // fallback if sensor state is not a number
                 v = 0.0f;
