@@ -1308,21 +1308,25 @@ script:
             volume_level: !lambda |-
               // Read current reported volume from the HA sensor
               float v = id(ha_media_player_volume).state;
-              ESP_LOGD("control_volume", "media player %s is currently at %d", ha_media_player_volume, v);
+              ESP_LOGD("control_volume", "media player ${ha_media_player} is currently at %d", v);
               if (!isfinite(v)) {
                 // fallback if sensor state is not a number
+                ESP_LOGD("control_volume", "%f is not finite, setting it to 0.0", v);
                 v = 0.0f;
               }
               // Step = 1/24 ≈ 0.04166666
               const float step = 0.04166666f;
               if (increase_volume) {
                 v += step;
+                ESP_LOGD("control_volume", "increasing ${ha_media_player} to %f", v);
               } else {
                 v -= step;
+                ESP_LOGD("control_volume", "decreasing ${ha_media_player} to %f", v);
               }
               // Clamp to [0.0, 1.0]
               if (v < 0.0f) v = 0.0f;
               if (v > 1.0f) v = 1.0f;
+              ESP_LOGD("control_volume", "returning %f", v);
               return v;
       - delay: 1s
       - lambda: id(dial_touched) = false;
