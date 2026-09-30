@@ -129,6 +129,10 @@ psram:
   ignore_not_found: false  # The VPE has PSRAM, so this is safe. Allows configuring WiFi driver to use more resources (done automatically by the speaker media player)
 
 globals:
+  - id: pre_duck_volume
+    type: float
+    restore_value: no
+    initial_value: '0.0'
   # Global index for our LEDs. So that switching between different animation does not lead to unwanted effects.
   - id: global_led_animation_index
     type: int
@@ -260,6 +264,9 @@ switch:
           id: media_mixing_input
           decibel_reduction: 0
           duration: 1.0s
+      - script.execute:
+          id: duck_volume_custom
+          unduck: true
       # Refresh the LED ring
       - script.execute: control_leds
     on_turn_on:
@@ -268,6 +275,9 @@ switch:
           id: media_mixing_input
           decibel_reduction: 20
           duration: 0.0s
+      - script.execute:
+          id: duck_volume_custom
+          unduck: false
       # Enable stop wake word
       - micro_wake_word.enable_model: stop
       # Ring timer
@@ -767,7 +777,7 @@ light:
             Color color(light_color.get_red() * 255, light_color.get_green() * 255,
                   light_color.get_blue() * 255);
             Color silenced_color(255, 0, 0);
-            auto volume_ratio = 12.0f * id(external_media_player).volume;
+            auto volume_ratio = 12.0f * id(ha_media_player_volume).state;
             for (uint8_t i = 0; i < 12; i++) {
               if (i <= volume_ratio) {
                 it[(6+i)%12] = color * min( 255.0f * (volume_ratio - i) , 255.0f ) ;
@@ -992,6 +1002,21 @@ power_supply:
     pin: GPIO45
 
 sensor:
+  - platform: homeassistant
+    id: ha_media_player_volume
+    entity_id: ${ha_media_player}
+    attribute: volume_level
+    internal: true
+    on_value:
+      then:
+        # Keep the LED ring in sync with the volume level of ha_media_player
+        - light.turn_on:
+            brightness: !lambda return max( id(led_ring).current_values.get_brightness() , 0.2f );
+            id: voice_assistant_leds
+            effect: "Volume Display"
+        - delay: 1s
+        - script.execute: control_leds
+
   # The dial. Used to control volume and Hue of the LED ring.
   - platform: rotary_encoder
     id: dial
@@ -1314,16 +1339,29 @@ script:
       increase_volume: bool  # True: Increase volume / False: Decrease volume.
     then:
       - delay: 16ms
-      - if:
-          condition:
-            lambda: return increase_volume;
-          then:
-            - media_player.volume_up:
-                id: external_media_player
-          else:
-            - media_player.volume_down:
-                id: external_media_player
-      - script.execute: control_leds
+      # Compute new volume and call Home Assistant
+      - homeassistant.service:
+          service: media_player.volume_set
+          data:
+            entity_id: ${ha_media_player}
+            volume_level: !lambda |-
+              // Read current reported volume from the HA sensor
+              float v = id(ha_media_player_volume).state;
+              if (!isfinite(v)) {
+                // fallback if sensor state is not a number
+                v = 0.0f;
+              }
+              // Step = 1/24 ≈ 0.04166666
+              const float step = 0.04166666f;
+              if (increase_volume) {
+                v += step;
+              } else {
+                v -= step;
+              }
+              // Clamp to [0.0, 1.0]
+              if (v < 0.0f) v = 0.0f;
+              if (v > 1.0f) v = 1.0f;
+              return v;
       - delay: 1s
       - lambda: id(dial_touched) = false;
       - sensor.rotary_encoder.set_value:
@@ -1680,6 +1718,9 @@ media_player:
           id: media_mixing_input
           decibel_reduction: 20
           duration: 0.0s
+      - script.execute:
+          id: duck_volume_custom
+          unduck: false
     on_state:
       if:
         condition:
@@ -1694,6 +1735,9 @@ media_player:
               id: media_mixing_input
               decibel_reduction: 0
               duration: 1.0s
+          - script.execute:
+              id: duck_volume_custom
+              unduck: true
 
 voice_kit:
   id: voice_kit_component
@@ -1861,6 +1905,9 @@ voice_assistant:
         id: media_mixing_input
         decibel_reduction: 20  # Number of dB quieter; higher implies more quiet, 0 implies full volume
         duration: 0.0s         # The duration of the transition (default is no transition)
+    - script.execute:
+        id: duck_volume_custom
+        unduck: false
   on_listening:
     - lambda: id(voice_assistant_phase) = ${voice_assist_waiting_for_command_phase_id};
     - script.execute: control_leds
@@ -1900,6 +1947,9 @@ voice_assistant:
         id: media_mixing_input
         decibel_reduction: 0
         duration: 1.0s
+    - script.execute:
+        id: duck_volume_custom
+        unduck: true
     # If the end happened because of an error, let the error phase on for a second
     - if:
         condition:
