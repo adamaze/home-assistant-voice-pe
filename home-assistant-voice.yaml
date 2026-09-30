@@ -364,10 +364,10 @@ binary_sensor:
               condition:
                 lambda: return !id(init_in_progress) && !id(color_changed) && !id(group_volume_changed);
               then:
-                - script.execute:
-                    id: play_sound
-                    priority: false
-                    sound_file: "center_button_double_press_sound"
+                #- script.execute:
+                #    id: play_sound
+                #    priority: false
+                #    sound_file: "center_button_double_press_sound"
                 - event.trigger:
                     id: button_press_event
                     event_type: "double_press"
